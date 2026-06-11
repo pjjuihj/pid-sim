@@ -1,0 +1,50 @@
+{
+  "project": "稳定平台",
+  "serial": {
+    "port": "COM3",
+    "baud": 115200,
+    "protocol": "csv",
+    "send_format": "P:{kp:.2f},{ki:.2f},{kd:.3f},{deadband:.1f}\\n"
+  },
+  "axes": [
+    {
+      "name": "Roll",
+      "color": "#2196F3",
+      "data_format": "sp,meas,out",
+      "params": [
+        {"id": "kp",       "label": "Kp",       "min": 0, "max": 5,   "step": 0.01,  "default": 1.5,  "send": true},
+        {"id": "ki",       "label": "Ki",       "min": 0, "max": 5,   "step": 0.01,  "default": 1.5,  "send": true},
+        {"id": "kd",       "label": "Kd",       "min": 0, "max": 0.5, "step": 0.001, "default": 0.06, "send": true},
+        {"id": "deadband", "label": "Deadband", "min": 0, "max": 10,  "step": 0.1,   "default": 2.0,  "send": true},
+        {"id": "d_tau",    "label": "D τ 滤波",  "min": 0, "max": 0.2, "step": 0.001, "default": 0.05, "send": false},
+        {"id": "sp_weight","label": "SP Weight", "min": 0, "max": 1,   "step": 0.01,  "default": 1.0,  "send": false},
+        {"id": "ramp_step","label": "Ramp Step", "min": 0, "max": 2,   "step": 0.1,   "default": 0.5,  "send": false}
+      ]
+    },
+    {
+      "name": "Pitch",
+      "color": "#FF9800",
+      "data_format": "sp2,meas2,out2",
+      "params": [
+        {"id": "kp",       "label": "Kp",       "min": 0, "max": 5,   "step": 0.01,  "default": 1.5,  "send": true},
+        {"id": "ki",       "label": "Ki",       "min": 0, "max": 5,   "step": 0.01,  "default": 1.5,  "send": true},
+        {"id": "kd",       "label": "Kd",       "min": 0, "max": 0.5, "step": 0.001, "default": 0.06, "send": true},
+        {"id": "deadband", "label": "Deadband", "min": 0, "max": 10,  "step": 0.1,   "default": 2.0,  "send": true},
+        {"id": "d_tau",    "label": "D τ 滤波",  "min": 0, "max": 0.2, "step": 0.001, "default": 0.05, "send": false},
+        {"id": "sp_weight","label": "SP Weight", "min": 0, "max": 1,   "step": 0.01,  "default": 1.0,  "send": false},
+        {"id": "ramp_step","label": "Ramp Step", "min": 0, "max": 2,   "step": 0.1,   "default": 0.5,  "send": false}
+      ]
+    }
+  ],
+  "presets": {
+    "默认": {"kp": 1.5, "ki": 1.5, "kd": 0.06, "deadband": 2.0, "d_tau": 0.05, "sp_weight": 1.0, "ramp_step": 0.5},
+    "激进": {"kp": 3.0, "ki": 2.0, "kd": 0.10, "deadband": 0.0, "d_tau": 0.03, "sp_weight": 0.8, "ramp_step": 1.0},
+    "保守": {"kp": 0.5, "ki": 0.5, "kd": 0.02, "deadband": 5.0, "d_tau": 0.10, "sp_weight": 1.0, "ramp_step": 0.3}
+  },
+  "chart": {
+    "max_points": 1000,
+    "send_interval": 0.05,
+    "y_range": [-15, 15],
+    "y1_range": [-900, 900]
+  }
+}

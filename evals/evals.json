@@ -1,0 +1,23 @@
+{
+  "skill_name": "pid-sim",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我的 STM32 项目 PID 控制器有稳态振荡，帮我调参消除振荡",
+      "expected_output": "检测项目 PID 配置，创建仿真环境，启动 Web 界面，用户可通过滑块调参或自动调参",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我想看下 PID 的阶跃响应曲线，Kp=1.5 Ki=1.5 Kd=0.06",
+      "expected_output": "启动仿真器，显示阶跃响应曲线，支持缩放和平移",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "帮我在 STM32 上添加 UART 输出 PID 数据的功能，用 USART1 PA9/PA10",
+      "expected_output": "生成 usart.c/h，添加 UART 初始化和数据输出代码",
+      "files": []
+    }
+  ]
+}

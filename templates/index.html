@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PID Tuner</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <style>
+        :root {
+            --bg: #f0f0f0; --panel: #ffffff; --surface: #f8f8f8; --border: #d0d0d0;
+            --accent: #0078d4; --accent-h: #1a8cff; --danger: #d32f2f; --success: #2e7d32;
+            --warning: #f57c00; --text: #1e1e1e; --dim: #666666; --bright: #000000;
+            --input: #ffffff; --sub: #e0e0e0;
+            --mono: 'Consolas', 'Courier New', monospace;
+            --sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --radius: 4px; --transition: 0.12s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 13px; overflow: hidden; height: 100vh; }
+
+        /* ===== Titlebar ===== */
+        .titlebar {
+            background: linear-gradient(180deg, #e8e8e8, #d8d8d8); border-bottom: 1px solid #bbb;
+            padding: 0 16px; display: flex; align-items: center; justify-content: space-between; height: 40px;
+        }
+        .titlebar h1 { font-size: 14px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; }
+        .titlebar h1 .icon { font-size: 16px; }
+        .titlebar h1 .accent { color: #0078d4; }
+        .titlebar h1 .dim { color: #888; font-weight: 400; }
+        .titlebar .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; }
+        .titlebar .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; transition: var(--transition); }
+        .titlebar .dot.run { background: #0078d4; box-shadow: 0 0 6px #0078d4; animation: pulse 1.5s infinite; }
+        .titlebar .dot.ok { background: #2e7d32; box-shadow: 0 0 4px #2e7d32; }
+        .titlebar .dot.err { background: #d32f2f; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+        /* ===== Main Layout ===== */
+        .main { display: flex; height: calc(100vh - 40px - 28px); }
+
+        /* ===== Sidebar ===== */
+        .sidebar { width: 280px; min-width: 280px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--sub); border-radius: 3px; }
+
+        .sec { border-bottom: 1px solid var(--border); }
+        .sec-h {
+            padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: #555; background: linear-gradient(180deg, #f0f0f0, #e8e8e8);
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; user-select: none; transition: var(--transition);
+            border-bottom: 1px solid #d0d0d0;
+        }
+        .sec-h:hover { color: #333; background: linear-gradient(180deg, #e8e8e8, #e0e0e0); }
+        .sec-h .arrow { font-size: 10px; transition: transform 0.2s; }
+        .sec-h .arrow.collapsed { transform: rotate(-90deg); }
+        .sec-b { padding: 10px 14px; }
+        .sec-b.hidden { display: none; }
+
+        /* ===== Parameters ===== */
+        .param { margin-bottom: 10px; }
+        .param-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .param-head .name { font-size: 12px; color: var(--text); font-weight: 500; }
+        .param-head .val {
+            font-family: var(--mono); font-size: 12px; font-weight: 600;
+            color: #0078d4; background: #f5f5f5; padding: 2px 8px;
+            border-radius: 3px; min-width: 52px; text-align: right;
+            border: 1px solid #ccc; transition: var(--transition);
+        }
+        .param-head .val.changed { border-color: #f57c00; color: #f57c00; background: #fff8e1; }
+        .param-range { display: flex; justify-content: space-between; font-size: 9px; color: #aaa; margin-top: 2px; font-family: var(--mono); }
+        .param input[type="range"] {
+            width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
+            background: #d0d0d0; border-radius: 3px; outline: none; cursor: pointer;
+        }
+        .param input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px;
+            background: #0078d4; border-radius: 50%; cursor: pointer;
+            border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: var(--transition);
+        }
+        .param input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); background: #1a8cff; }
+        .param input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.1); }
+        .param .tip { font-size: 10px; color: #888; margin-top: 2px; line-height: 1.4; display: none; }
+        .param:hover .tip { display: block; }
+
+        /* ===== Axis Tabs ===== */
+        .axis-tabs { display: flex; gap: 2px; margin-bottom: 8px; }
+        .axis-tab {
+            padding: 6px 16px; border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0;
+            background: var(--input); color: var(--dim); cursor: pointer;
+            font-size: 12px; font-weight: 600; transition: var(--transition);
+        }
+        .axis-tab:hover { color: var(--text); border-color: var(--accent); }
+        .axis-tab.active { background: var(--panel); color: var(--accent); border-bottom-color: var(--panel); border-top: 2px solid var(--accent); }
+
+        /* ===== Presets ===== */
+        .preset-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+        .preset-btn {
+            padding: 4px 10px; border: 1px solid #bbb; border-radius: var(--radius);
+            background: linear-gradient(180deg, #fff, #f5f5f5); color: #333; cursor: pointer;
+            font-size: 11px; font-family: var(--sans); transition: var(--transition);
+        }
+        .preset-btn:hover { border-color: #0078d4; color: #0078d4; background: #f0f8ff; }
+        .preset-btn.active { background: #0078d4; border-color: #0060b0; color: #fff; }
+        .preset-save { display: flex; gap: 4px; margin-top: 4px; }
+        .preset-save input {
+            flex: 1; padding: 5px 8px; background: #fff; border: 1px solid #ccc;
+            border-radius: var(--radius); color: #333; font-size: 11px; outline: none;
+            transition: var(--transition);
+        }
+        .preset-save input:focus { border-color: #0078d4; box-shadow: 0 0 0 1px #0078d4; }
+        .preset-save input::placeholder { color: #aaa; }
+
+        /* ===== Buttons ===== */
+        .btn-row { display: flex; gap: 4px; flex-wrap: wrap; }
+        .btn {
+            padding: 6px 12px; border: 1px solid #bbb; border-radius: var(--radius);
+            background: linear-gradient(180deg, #fff, #f0f0f0); color: #333; cursor: pointer;
+            font-size: 11px; font-family: var(--sans); font-weight: 500;
+            display: flex; align-items: center; gap: 5px;
+            transition: var(--transition); user-select: none;
+        }
+        .btn:hover { background: linear-gradient(180deg, #f0f0f0, #e8e8e8); border-color: #0078d4; color: #0078d4; }
+        .btn:active { background: #e0e0e0; transform: scale(0.97); }
+        .btn.primary { background: linear-gradient(180deg, #1a8cff, #0078d4); border-color: #0060b0; color: #fff; font-weight: 600; }
+        .btn.primary:hover { background: linear-gradient(180deg, #2a9cff, #1a8cff); }
+        .btn.danger { border-color: #d32f2f; color: #d32f2f; }
+        .btn.danger:hover { background: #d32f2f; color: #fff; }
+        .btn.success { border-color: #2e7d32; color: #2e7d32; }
+        .btn.success:hover { background: #2e7d32; color: #fff; }
+        .btn.warning { border-color: #f57c00; color: #f57c00; }
+        .btn.warning:hover { background: #f57c00; color: #fff; }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+        .btn .kbd { font-size: 9px; color: #999; margin-left: 2px; font-family: var(--mono); }
+
+        /* ===== Serial ===== */
+        .serial-row { display: flex; gap: 4px; align-items: center; margin-bottom: 8px; }
+        .serial-row select {
+            flex: 1; padding: 5px 8px; background: #fff; border: 1px solid #ccc;
+            border-radius: var(--radius); color: #333; font-size: 11px; font-family: var(--mono);
+            outline: none; cursor: pointer;
+        }
+        .serial-row select:focus { border-color: #0078d4; box-shadow: 0 0 0 1px #0078d4; }
+
+        /* ===== Progress ===== */
+        .progress { width: 100%; height: 4px; background: #e0e0e0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #0078d4, #2e7d32); border-radius: 2px; width: 0%; transition: width 0.3s; }
+
+        /* ===== Result Box ===== */
+        .result {
+            margin-top: 8px; padding: 10px; background: #f5f8fc; border: 1px solid #b3d4fc;
+            border-radius: var(--radius); font-size: 11px; font-family: var(--mono); line-height: 1.8;
+            display: none; color: #333; max-height: 200px; overflow-y: auto;
+        }
+        .result.show { display: block; }
+        .result b { color: #0078d4; }
+        .result .metric { display: inline-block; background: #e3f2fd; color: #0078d4; padding: 1px 6px; border-radius: 3px; margin: 1px 2px; font-weight: 600; }
+
+        /* ===== Chart Area ===== */
+        .chart-area { flex: 1; display: flex; flex-direction: column; padding: 10px; background: var(--bg); }
+        .chart-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 10px; margin-bottom: 6px; background: #fff;
+            border-radius: var(--radius); border: 1px solid #d0d0d0;
+        }
+        .chart-hint { font-size: 10px; color: #888; display: flex; align-items: center; gap: 12px; }
+        .chart-hint span { display: flex; align-items: center; gap: 3px; }
+        .chart-container {
+            flex: 1; position: relative; background: #fff;
+            border-radius: var(--radius); border: 1px solid #d0d0d0; padding: 6px;
+        }
+
+        /* ===== Status Bar ===== */
+        .statusbar {
+            height: 28px; background: linear-gradient(180deg, #f0f0f0, #e8e8e8); border-top: 1px solid #bbb;
+            display: flex; align-items: center; padding: 0 14px; gap: 0; font-size: 11px; color: #666;
+        }
+        .statusbar .item { display: flex; align-items: center; gap: 5px; padding: 0 12px; height: 100%; }
+        .statusbar .sep { width: 1px; height: 14px; background: #ccc; }
+        .statusbar .item.active { color: #0078d4; }
+
+        /* ===== Tooltip ===== */
+        [data-tip] { position: relative; }
+        [data-tip]:hover::after {
+            content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: var(--bg); color: var(--text); padding: 4px 8px; border-radius: 4px;
+            font-size: 10px; white-space: nowrap; z-index: 100; border: 1px solid var(--border);
+            pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div class="titlebar">
+    <h1>
+        <span class="icon">⚡</span>
+        <span class="accent">PID Tuner</span>
+        <span class="dim">—</span>
+        <span id="projectName">...</span>
+    </h1>
+    <div class="status">
+        <div class="dot" id="simDot"></div>
+        <span id="simLabel">就绪</span>
+    </div>
+</div>
+
+<div class="main">
+    <div class="sidebar">
+
+        <!-- Axis Selection -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>📐 轴选择</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b"><div class="axis-tabs" id="axisTabs"></div></div>
+        </div>
+
+        <!-- PID Parameters -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>⚙ PID 参数</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b" id="paramsBody"></div>
+        </div>
+
+        <!-- Advanced Parameters -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>🔧 高级参数</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b" id="advParamsBody"></div>
+        </div>
+
+        <!-- Presets -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>💾 参数预设</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b">
+                <div class="preset-row" id="presetRow"></div>
+                <div class="preset-save">
+                    <input type="text" id="presetName" placeholder="输入预设名称...">
+                    <button class="btn" onclick="savePreset()">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulation Control -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>▶ 仿真控制</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b">
+                <div class="btn-row">
+                    <button class="btn primary" onclick="startSim('free')" data-tip="开始自由仿真 (Space)">▶ 自由仿真</button>
+                    <button class="btn danger" onclick="stopSim()" data-tip="停止仿真 (Space)">■ 停止</button>
+                    <button class="btn" onclick="resetSim()" data-tip="重置仿真 (R)">↺ 重置</button>
+                    <button class="btn success" onclick="stepResponse()" data-tip="阶跃响应测试">阶跃 5°</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto Tune -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>⚡ 自动调参</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b">
+                <div class="btn-row">
+                    <button class="btn warning" onclick="autoTune()" id="btnAuto" data-tip="自动搜索最优参数">⚡ 自动调参</button>
+                </div>
+                <div class="progress"><div class="progress-bar" id="progress"></div></div>
+                <div style="font-size:11px;color:var(--dim);margin-top:6px" id="tuneStatus"></div>
+                <div class="result" id="resultBox"></div>
+            </div>
+        </div>
+
+        <!-- Serial -->
+        <div class="sec">
+            <div class="sec-h" onclick="toggleSec(this)">
+                <span>📡 串口连接</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="sec-b">
+                <div class="serial-row">
+                    <select id="serialPort"><option>COM3</option></select>
+                    <button class="btn primary" onclick="startSerial()">连接</button>
+                    <button class="btn danger" onclick="stopSerial()">断开</button>
+                </div>
+                <div style="font-size:11px;color:var(--dim)" id="serialStatus">未连接</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Area -->
+    <div class="chart-area">
+        <div class="chart-toolbar">
+            <div class="chart-hint">
+                <span>🖱️ 滚轮缩放</span>
+                <span>✋ 拖拽平移</span>
+                <span>👆 点击图例隐藏</span>
+                <span>⌨️ Space 开始/停止 · R 重置</span>
+            </div>
+            <button class="btn" onclick="chart.resetZoom()" data-tip="重置缩放 (Home)">🔍 重置视图</button>
+        </div>
+        <div class="chart-container"><canvas id="chart"></canvas></div>
+    </div>
+</div>
+
+<div class="statusbar">
+    <div class="item" id="sbSim">● 就绪</div><div class="sep"></div>
+    <div class="item" id="sbSerial">📡 未连接</div><div class="sep"></div>
+    <div class="item" id="sbRate">0 pts/s</div><div class="sep"></div>
+    <div class="item" id="sbParams">-</div>
+</div>
+
+<script>
+const socket = io({transports:['websocket','polling'],forceNew:true});
+let cfg = {axes:[], presets:{}, serial:{}, chart:{}};
+let currentAxis = 0;
+let chart;
+let dataRate = 0;
+let simRunning = false;
+setInterval(()=>{document.getElementById('sbRate').textContent=dataRate+' pts/s';dataRate=0},1000);
+
+// Colors (Catppuccin-inspired)
+const COLORS = ['#89b4fa','#fab387','#a6e3a1','#f38ba8','#cba6f7','#94e2d5'];
+const SP_COLORS = ['#f38ba8','#eba0ac','#a6e3a1','#f5c2e7','#b4befe','#89dceb'];
+
+// Section toggle
+function toggleSec(el){
+    const body = el.nextElementSibling;
+    const arrow = el.querySelector('.arrow');
+    body.classList.toggle('hidden');
+    arrow.classList.toggle('collapsed');
+}
+
+// Chart initialization
+function initChart(){
+    const datasets = [];
+    cfg.axes.forEach((axis,i)=>{
+        datasets.push({label:axis.name+' 设定值',data:[],borderColor:SP_COLORS[i%6],borderWidth:1.5,pointRadius:0,tension:.1,borderDash:[5,3]});
+        datasets.push({label:axis.name+' 实际',data:[],borderColor:COLORS[i%6],borderWidth:2,pointRadius:0,tension:.1,fill:false});
+        datasets.push({label:axis.name+' 输出',data:[],borderColor:COLORS[(i+2)%6],borderWidth:1,pointRadius:0,tension:.1,yAxisID:'y1',fill:false});
+    });
+    const ctx = document.getElementById('chart').getContext('2d');
+    chart = new Chart(ctx,{
+        type:'line',
+        data:{labels:[],datasets},
+        options:{
+            animation:false,responsive:true,maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            scales:{
+                x:{display:true,title:{display:true,text:'时间 (s)',color:'#666',font:{size:11,weight:'500'}},ticks:{color:'#888',maxTicksLimit:12,font:{size:10}},grid:{color:'#e8e8e8',lineWidth:1}},
+                y:{position:'left',title:{display:true,text:'角度 (°)',color:'#0078d4',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},suggestedMin:-15,suggestedMax:15,grid:{color:'#e8e8e8',lineWidth:1}},
+                y1:{position:'right',title:{display:true,text:'PID 输出',color:'#2e7d32',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},grid:{drawOnChartArea:false}}
+            },
+            plugins:{
+                legend:{display:true,position:'top',labels:{color:'#666',font:{size:11},usePointStyle:true,pointStyle:'line',padding:16,boxWidth:20}},
+                tooltip:{backgroundColor:'#fff',borderColor:'#ccc',borderWidth:1,titleColor:'#333',bodyColor:'#555',titleFont:{size:12},bodyFont:{size:11,family:'monospace'},padding:10,cornerRadius:4,boxShadow:'0 2px 8px rgba(0,0,0,0.15)'},
+                zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},limits:{x:{minRange:1}}}
+            }
+        }
+    });
+}
+
+// Build parameter UI
+function buildParamsUI(){
+    // Axis tabs
+    const tabs = document.getElementById('axisTabs');
+    tabs.innerHTML = '';
+    cfg.axes.forEach((axis,i)=>{
+        const tab = document.createElement('div');
+        tab.className = 'axis-tab'+(i===currentAxis?' active':'');
+        tab.textContent = axis.name;
+        tab.style.borderLeftColor = axis.color || COLORS[i%6];
+        tab.onclick = ()=>{currentAxis=i;buildParamsUI()};
+        tabs.appendChild(tab);
+    });
+
+    const axis = cfg.axes[currentAxis];
+    if(!axis) return;
+
+    // Tips for parameters
+    const tips = {
+        kp:'比例增益：越大响应越快，但过大引起振荡',
+        ki:'积分增益：消除稳态误差，过大引起超调',
+        kd:'微分增益：抑制振荡，过大放大噪声',
+        deadband:'死区：误差小于此值时输出为零，消除机械间隙振荡',
+        d_tau:'微分滤波时间常数，越大滤波越强但响应更慢',
+        sp_weight:'设定值权重，1.0=标准PID，<1.0减少比例冲击',
+        ramp_step:'IR丢失后每周期回零步长，越大回正越快'
+    };
+
+    // Core params
+    const coreParams = ['kp','ki','kd','deadband'];
+    const advParams = ['d_tau','sp_weight','ramp_step'];
+
+    function buildParamGroup(container, paramIds){
+        container.innerHTML = '';
+        axis.params.filter(p=>paramIds.includes(p.id)).forEach(p=>{
+            const div = document.createElement('div');
+            div.className = 'param';
+            const dec = String(p.step).split('.')[1]?.length||0;
+            const tip = tips[p.id]||'';
+            div.innerHTML = `
+                <div class="param-head">
+                    <span class="name">${p.label}</span>
+                    <span class="val" id="v_${p.id}">${p.default.toFixed(dec)}</span>
+                </div>
+                <input type="range" id="s_${p.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.default}">
+                <div class="param-range"><span>${p.min}</span><span>${p.max}</span></div>
+                ${tip?`<div class="tip">💡 ${tip}</div>`:''}
+            `;
+            container.appendChild(div);
+            const input = div.querySelector('input');
+            const valEl = div.querySelector('.val');
+            input.addEventListener('input',function(){
+                const v=parseFloat(this.value);
+                valEl.textContent=v.toFixed(dec);
+                valEl.classList.add('changed');
+                clearTimeout(valEl._t);
+                valEl._t=setTimeout(()=>valEl.classList.remove('changed'),500);
+                sendCurrentParams();
+            });
+            // Double-click to reset
+            input.addEventListener('dblclick',function(){
+                this.value=p.default;
+                valEl.textContent=p.default.toFixed(dec);
+                sendCurrentParams();
+            });
+        });
+    }
+
+    buildParamGroup(document.getElementById('paramsBody'), coreParams);
+    buildParamGroup(document.getElementById('advParamsBody'), advParams);
+    updateStatusBar();
+}
+
+function buildPresets(){
+    const row = document.getElementById('presetRow');
+    row.innerHTML = '';
+    Object.keys(cfg.presets).forEach(name=>{
+        const btn = document.createElement('div');
+        btn.className = 'preset-btn';
+        btn.textContent = name;
+        btn.onclick = ()=>socket.emit('apply_preset',{name});
+        row.appendChild(btn);
+    });
+}
+
+function sendCurrentParams(){
+    const axis = cfg.axes[currentAxis];
+    if(!axis) return;
+    const params = {};
+    axis.params.forEach(p=>{
+        const el = document.getElementById('s_'+p.id);
+        if(el) params[p.id] = parseFloat(el.value);
+    });
+    socket.emit('update_params',{axis:axis.name,params});
+    updateStatusBar();
+}
+
+function updateStatusBar(){
+    const axis = cfg.axes[currentAxis];
+    if(!axis) return;
+    const kp=parseFloat(document.getElementById('s_kp')?.value||0);
+    const ki=parseFloat(document.getElementById('s_ki')?.value||0);
+    const kd=parseFloat(document.getElementById('s_kd')?.value||0);
+    const db=parseFloat(document.getElementById('s_deadband')?.value||0);
+    document.getElementById('sbParams').textContent=`${axis.name}: Kp=${kp.toFixed(2)} Ki=${ki.toFixed(2)} Kd=${kd.toFixed(3)} Db=${db.toFixed(1)}`;
+}
+
+// Socket events
+socket.on('config',data=>{
+    cfg=data;
+    document.getElementById('projectName').textContent=data.project||'PID Tuner';
+    initChart();
+    buildParamsUI();
+    buildPresets();
+});
+socket.on('presets_updated',data=>{cfg.presets=data;buildPresets()});
+socket.on('sim_data',data=>{
+    if(!chart) return;
+    const axisIdx = cfg.axes.findIndex(a=>a.name===data.axis);
+    if(axisIdx<0) return;
+    const dsIdx = axisIdx*3;
+    const labels = chart.data.labels;
+    const ds = chart.data.datasets;
+    for(let i=0;i<data.t.length;i++){
+        if(axisIdx===0) labels.push(data.t[i]);
+        ds[dsIdx].data.push(data.sp[i]);
+        ds[dsIdx+1].data.push(data.meas[i]);
+        ds[dsIdx+2].data.push(data.out[i]);
+        dataRate++;
+    }
+    const maxPts = cfg.chart?.max_points||1000;
+    while(labels.length>maxPts){
+        labels.shift();
+        ds.forEach(d=>d.data.shift());
+    }
+    chart.update('none');
+});
+socket.on('init_data',()=>{});
+socket.on('params_updated',data=>{
+    if(data.axis===cfg.axes[currentAxis]?.name){
+        Object.entries(data.params).forEach(([k,v])=>{
+            const el=document.getElementById('s_'+k);
+            if(el){el.value=v;const p=cfg.axes[currentAxis].params.find(x=>x.id===k);if(p){const dec=String(p.step).split('.')[1]?.length||0;document.getElementById('v_'+k).textContent=v.toFixed(dec)}}
+        });
+    }
+});
+socket.on('apply_params',params=>{
+    Object.entries(params).forEach(([k,v])=>{
+        const el=document.getElementById('s_'+k);
+        if(el){
+            el.value=v;
+            const p=cfg.axes[currentAxis]?.params.find(x=>x.id===k);
+            if(p){const dec=String(p.step).split('.')[1]?.length||0;document.getElementById('v_'+k).textContent=v.toFixed(dec)}
+        }
+    });
+    sendCurrentParams();
+});
+
+// Control functions
+function startSim(mode){
+    socket.emit('start_sim',{mode});
+    simRunning=true;
+    document.getElementById('simDot').className='dot run';
+    document.getElementById('simLabel').textContent='运行中';
+    document.getElementById('sbSim').textContent='● '+mode;
+    document.getElementById('sbSim').className='item active';
+}
+function stopSim(){
+    socket.emit('stop_sim');
+    simRunning=false;
+    document.getElementById('simDot').className='dot';
+    document.getElementById('simLabel').textContent='已停止';
+    document.getElementById('sbSim').textContent='● 停止';
+    document.getElementById('sbSim').className='item';
+    document.getElementById('sbSim').style.color='var(--danger)';
+}
+function resetSim(){
+    socket.emit('reset_sim');
+    simRunning=false;
+    if(chart){chart.data.labels=[];chart.data.datasets.forEach(d=>d.data=[]);chart.update()}
+    document.getElementById('simDot').className='dot';
+    document.getElementById('simLabel').textContent='就绪';
+    document.getElementById('sbSim').textContent='● 就绪';
+    document.getElementById('sbSim').className='item';
+    document.getElementById('sbSim').style.color='';
+}
+function stepResponse(){
+    socket.emit('step_response',{target:5});
+    simRunning=true;
+    document.getElementById('simDot').className='dot run';
+    document.getElementById('simLabel').textContent='阶跃 0→5°';
+    document.getElementById('sbSim').textContent='● 阶跃';
+    document.getElementById('sbSim').className='item active';
+}
+
+// Auto tune
+function autoTune(){
+    document.getElementById('btnAuto').disabled=true;
+    document.getElementById('btnAuto').textContent='⏳ 调参中...';
+    document.getElementById('resultBox').className='result';
+    socket.emit('auto_tune',{target:5});
+}
+socket.on('auto_tune_progress',d=>{
+    document.getElementById('tuneStatus').textContent=d.msg;
+    if(d.total>0) document.getElementById('progress').style.width=Math.round(d.progress/d.total*100)+'%';
+});
+socket.on('auto_tune_result',d=>{
+    document.getElementById('btnAuto').disabled=false;
+    document.getElementById('btnAuto').textContent='⚡ 自动调参';
+    document.getElementById('progress').style.width='100%';
+    document.getElementById('tuneStatus').textContent=d.msg;
+    const m=d.metrics;const b=document.getElementById('resultBox');
+    b.innerHTML=`<b>🏆 最优参数</b><br>`+
+        `Kp=<span class="metric">${d.params.kp.toFixed(2)}</span> `+
+        `Ki=<span class="metric">${d.params.ki.toFixed(2)}</span> `+
+        `Kd=<span class="metric">${d.params.kd.toFixed(3)}</span><br>`+
+        `Deadband=<span class="metric">${d.params.deadband.toFixed(1)}</span> `+
+        `Dτ=<span class="metric">${d.params.d_tau.toFixed(3)}</span><br><br>`+
+        `<b>📊 性能指标</b><br>`+
+        `稳态误差: <span class="metric">${m.ss_error}°</span> `+
+        `振荡: <span class="metric">${m.ss_osc}°</span><br>`+
+        `超调: <span class="metric">${m.overshoot}%</span> `+
+        `评分: <span class="metric">${m.score}</span>`;
+    b.className='result show';
+});
+function savePreset(){
+    const name=document.getElementById('presetName').value.trim();
+    if(!name)return;
+    const axis=cfg.axes[currentAxis];
+    if(!axis)return;
+    const params={};
+    axis.params.forEach(p=>{const el=document.getElementById('s_'+p.id);if(el)params[p.id]=parseFloat(el.value)});
+    socket.emit('save_preset',{name,params});
+    document.getElementById('presetName').value='';
+}
+
+// Serial
+socket.emit('list_ports');
+socket.on('port_list',d=>{
+    const s=document.getElementById('serialPort');s.innerHTML='';
+    (d.ports||[]).forEach(p=>{const o=document.createElement('option');o.value=p.device;o.textContent=p.device+' ('+p.desc+')';s.appendChild(o)});
+    if(!d.ports?.length){const o=document.createElement('option');o.value='COM3';o.textContent='COM3';s.appendChild(o)}
+});
+function startSerial(){socket.emit('start_serial',{port:document.getElementById('serialPort').value,baud:115200})}
+function stopSerial(){socket.emit('stop_serial')}
+socket.on('serial_status',d=>{
+    const el=document.getElementById('serialStatus');
+    el.textContent=d.msg;
+    el.style.color=d.status==='connected'?'var(--success)':d.status==='error'?'var(--danger)':'';
+    const sb=document.getElementById('sbSerial');
+    sb.textContent='📡 '+d.msg;
+    sb.style.color=el.style.color;
+    if(d.status==='connected'){
+        document.getElementById('simDot').className='dot ok';
+        document.getElementById('simLabel').textContent='已连接';
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
+    if(e.code==='Space'){e.preventDefault();simRunning?stopSim():startSim('free')}
+    if(e.code==='KeyR'&&!e.ctrlKey){resetSim()}
+    if(e.code==='Home'){chart?.resetZoom()}
+});
+</script>
+</body>
+</html>
