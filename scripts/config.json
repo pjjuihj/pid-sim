@@ -1,0 +1,47 @@
+{
+  "project": "PID Sim Test",
+  "serial": {
+    "port": "COM3",
+    "baud": 115200,
+    "protocol": "csv"
+  },
+  "axes": [
+    {
+      "name": "Roll",
+      "data_format": "sp,meas,out",
+      "params": [
+        {
+          "id": "kp",
+          "label": "Kp",
+          "min": 0,
+          "max": 200,
+          "default": 1.5
+        },
+        {
+          "id": "ki",
+          "label": "Ki",
+          "min": 0,
+          "max": 10,
+          "default": 1.5
+        },
+        {
+          "id": "kd",
+          "label": "Kd",
+          "min": 0,
+          "max": 50,
+          "default": 0.06
+        }
+      ]
+    }
+  ],
+  "presets": {
+    "\u9ed8\u8ba4": {
+      "kp": 1.5,
+      "ki": 1.5,
+      "kd": 0.06
+    }
+  },
+  "chart": {
+    "send_interval": 0.05
+  }
+}

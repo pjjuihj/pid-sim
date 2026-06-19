@@ -22,6 +22,7 @@ def setup_sim(project_root, config_path=None):
         'scripts/server.py': 'server.py',
         'scripts/pid_engine.py': 'pid_engine.py',
         'scripts/plant_model.py': 'plant_model.py',
+        'scripts/real_auto_tune.py': 'real_auto_tune.py',
         'templates/index.html': 'templates/index.html',
     }
     for src, dst in files.items():

@@ -26,6 +26,9 @@ config = {}
 pid_controllers = {}  # 每个轴一个 PID
 plants = {}           # 每个轴一个物理模型
 
+# 自动调参器引用（用于取消操作）
+active_tuner = None
+
 # 串口
 serial_running = False
 serial_port = None
@@ -298,7 +301,7 @@ def _generate_ir_setpoint(t):
 
 @socketio.on('auto_tune')
 def handle_auto_tune(data=None):
-    global sim_running
+    global sim_running, active_tuner
     if sim_running:
         socketio.emit('auto_tune_progress', {'status': 'busy', 'msg': '请先停止仿真'})
         return
@@ -306,58 +309,97 @@ def handle_auto_tune(data=None):
     socketio.start_background_task(_auto_tune_worker, target)
 
 
+@socketio.on('cancel_auto_tune')
+def handle_cancel_auto_tune():
+    """取消正在进行的自动调参。"""
+    global active_tuner
+    if active_tuner is not None:
+        active_tuner.stop()
+        socketio.emit('auto_tune_progress', {'status': 'cancelled', 'msg': '正在取消调参...'})
+    else:
+        socketio.emit('auto_tune_progress', {'status': 'idle', 'msg': '没有正在进行的调参'})
+
+
 def _auto_tune_worker(target):
-    global sim_running
+    global sim_running, active_tuner
+
+    try:
+        from real_auto_tune import RelayFeedbackTuner, CancelledError
+    except ImportError:
+        socketio.emit('auto_tune_progress', {'status': 'error', 'msg': 'real_auto_tune 模块未找到'})
+        return
+
     dt = 0.005
-    kp_range = [0.5, 1.0, 1.5, 2.0, 3.0]
-    ki_range = [0.5, 1.0, 1.5, 2.0, 3.0]
-    kd_range = [0.02, 0.04, 0.06, 0.08, 0.10]
-    db_range = [0.0, 1.0, 2.0, 3.0, 5.0]
-    total = len(kp_range) * len(ki_range) * len(kd_range) * len(db_range)
-    best_score = float('inf')
-    best_params = {}
-    best_metrics = {}
-    count = 0
+    tuner = RelayFeedbackTuner(
+        relay_amplitude=500.0,
+        relay_hysteresis=1.0,
+        sample_time=0.005,
+        relay_duration=15.0,
+        min_cycles=3,
+        min_switch_time=0.03,
+        verify_duration=5.0,
+        setpoint=target,
+        zn_method='some_overshoot'
+    )
+    active_tuner = tuner
 
-    socketio.emit('auto_tune_progress', {'status': 'running', 'progress': 0, 'total': total, 'msg': f'搜索 {total} 种组合...'})
+    def make_plant_func(axis_name):
+        """创建受控对象函数。"""
+        plant = plants.get(axis_name)
+        if plant is None:
+            plant = ServoPlant(dt=dt)
+        pid = pid_controllers.get(axis_name)
 
-    for kp in kp_range:
-        for ki in ki_range:
-            for kd in kd_range:
-                for db in db_range:
-                    count += 1
-                    tp = PIDController(kp=kp, ki=ki, kd=kd, dt=dt, out_min=-800, out_max=800, d_tau=0.05, sp_weight=1.0, deadband=db)
-                    tp_plant = ServoPlant(dt=dt)
-                    steps = int(3.0 / dt)
-                    meas_list = []
-                    for i in range(steps):
-                        tt = i * dt
-                        sp = target if tt > 0.5 else 0.0
-                        m = tp_plant.platform_angle + random.gauss(0, 0.1)
-                        o = tp.compute(sp, m)
-                        tp_plant.update(o)
-                        meas_list.append(m)
-                    ss = meas_list[int(2.0/dt):]
-                    n = len(ss)
-                    ss_err = sum(abs(target - ss[i]) for i in range(n)) / n
-                    ss_mean = sum(ss) / n
-                    ss_osc = (sum((m - ss_mean)**2 for m in ss) / n) ** 0.5
-                    pk = max(meas_list[int(0.5/dt):]) if target > 0 else min(meas_list[int(0.5/dt):])
-                    overshoot = max(0, (abs(pk) - abs(target)) / abs(target) * 100) if abs(target) > 0.1 else 0
-                    score = ss_err * 10 + ss_osc * 20 + overshoot * 0.5
-                    if score < best_score:
-                        best_score = score
-                        best_params = {'kp': kp, 'ki': ki, 'kd': kd, 'deadband': db, 'd_tau': 0.05, 'sp_weight': 1.0}
-                        best_metrics = {'ss_error': round(ss_err, 3), 'ss_osc': round(ss_osc, 3), 'overshoot': round(overshoot, 1), 'score': round(score, 2)}
-                    if count % 10 == 0 or count == total:
-                        socketio.emit('auto_tune_progress', {'status': 'running', 'progress': count, 'total': total, 'msg': f'{count}/{total} | 最优: Kp={best_params.get("kp"):.1f} Ki={best_params.get("ki"):.1f} Kd={best_params.get("kd"):.2f} Db={best_params.get("deadband"):.0f}'})
-                        socketio.sleep(0.01)
+        def plant_func(control_output):
+            meas = plant.platform_angle + random.gauss(0, plant.noise_sigma)
+            return meas
 
-    socketio.emit('auto_tune_result', {'status': 'done', 'params': best_params, 'metrics': best_metrics, 'msg': f'完成！Kp={best_params["kp"]:.2f} Ki={best_params["ki"]:.2f} Kd={best_params["kd"]:.3f} Db={best_params["deadband"]:.1f}'})
-    for name in pid_controllers:
-        pid_controllers[name].update_params(best_params)
-    socketio.emit('apply_params', best_params)
-    _send_params_to_serial('Roll', best_params)
+        return plant_func
+
+    axis_name = list(pid_controllers.keys())[0] if pid_controllers else 'Roll'
+    plant_func = make_plant_func(axis_name)
+
+    def on_progress(phase, progress, msg):
+        socketio.emit('auto_tune_progress', {
+            'status': 'running',
+            'phase': phase,
+            'progress': progress,
+            'msg': msg
+        })
+        socketio.sleep(0.01)
+
+    try:
+        result = tuner.auto_tune(plant_func, on_progress=on_progress)
+
+        if result.status == 'cancelled':
+            socketio.emit('auto_tune_progress', {'status': 'cancelled', 'msg': '调参已取消'})
+        elif result.status in ('success', 'finetune_success'):
+            best_params = result.recommended_params
+            best_params['d_tau'] = 0.05
+            best_params['sp_weight'] = 1.0
+            socketio.emit('auto_tune_result', {
+                'status': 'done',
+                'params': best_params,
+                'metrics': {
+                    'ss_error': result.verification.steady_state_error if result.verification else 0,
+                    'ss_osc': 0,
+                    'overshoot': result.verification.overshoot if result.verification else 0,
+                    'score': 0
+                },
+                'msg': result.message
+            })
+            for name in pid_controllers:
+                pid_controllers[name].update_params(best_params)
+            socketio.emit('apply_params', best_params)
+            _send_params_to_serial(axis_name, best_params)
+        else:
+            socketio.emit('auto_tune_progress', {'status': 'error', 'msg': result.message})
+    except CancelledError:
+        socketio.emit('auto_tune_progress', {'status': 'cancelled', 'msg': '调参已取消'})
+    except Exception as e:
+        socketio.emit('auto_tune_progress', {'status': 'error', 'msg': f'调参异常: {e}'})
+    finally:
+        active_tuner = None
 
 
 # ========== 串口 ==========

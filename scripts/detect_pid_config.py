@@ -19,16 +19,29 @@ def detect_pid_config(project_root):
 
     # 搜索所有 .c/.h 文件（排除 Drivers 和 .git）
     all_files = []
+    max_depth = 10  # S7 修复：限制目录深度
+    max_file_size = 1024 * 1024  # 限制文件大小 1MB
+
     for root, dirs, files in os.walk(project_root):
+        # 限制深度
+        depth = root.replace(project_root, '').count(os.sep)
+        if depth > max_depth:
+            dirs.clear()
+            continue
+
         dirs[:] = [d for d in dirs if d not in ('Drivers', '.git', 'MDK-ARM', 'Debug', 'Release', 'Listings', 'Objects')]
         for f in files:
             if f.endswith(('.c', '.h')):
                 path = os.path.join(root, f)
                 try:
-                    content = open(path, 'r', encoding='utf-8', errors='ignore').read()
+                    # 限制文件大小
+                    if os.path.getsize(path) > max_file_size:
+                        continue
+                    with open(path, 'r', encoding='utf-8', errors='ignore') as file:
+                        content = file.read()
                     all_files.append((path, content))
-                except:
-                    pass
+                except (IOError, OSError) as e:
+                    print(f"读取文件失败 {path}: {e}", file=sys.stderr)
 
     # ===== 1. 检测 PID 相关代码 =====
     pid_patterns = [

@@ -202,8 +202,9 @@
         <span id="projectName">...</span>
     </h1>
     <div class="status">
+        <button class="btn" id="langToggle" onclick="setLang(currentLang==='zh'?'en':'zh')" style="padding:3px 10px;font-size:11px;margin-right:8px;border-radius:12px;" data-i18n="langBtn" title="English">EN</button>
         <div class="dot" id="simDot"></div>
-        <span id="simLabel">就绪</span>
+        <span id="simLabel" data-i18n="simReady">就绪</span>
     </div>
 </div>
 
@@ -213,7 +214,7 @@
         <!-- Axis Selection -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>📐 轴选择</span>
+                <span data-i18n="secAxis">📐 轴选择</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b"><div class="axis-tabs" id="axisTabs"></div></div>
@@ -222,7 +223,7 @@
         <!-- PID Parameters -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>⚙ PID 参数</span>
+                <span data-i18n="secPID">⚙ PID 参数</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b" id="paramsBody"></div>
@@ -231,7 +232,7 @@
         <!-- Advanced Parameters -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>🔧 高级参数</span>
+                <span data-i18n="secAdv">🔧 高级参数</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b" id="advParamsBody"></div>
@@ -240,14 +241,14 @@
         <!-- Presets -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>💾 参数预设</span>
+                <span data-i18n="secPreset">💾 参数预设</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b">
                 <div class="preset-row" id="presetRow"></div>
                 <div class="preset-save">
-                    <input type="text" id="presetName" placeholder="输入预设名称...">
-                    <button class="btn" onclick="savePreset()">保存</button>
+                    <input type="text" id="presetName" data-i18n-placeholder="presetPlaceholder" placeholder="输入预设名称...">
+                    <button class="btn" onclick="savePreset()" data-i18n="btnSave">保存</button>
                 </div>
             </div>
         </div>
@@ -255,15 +256,15 @@
         <!-- Simulation Control -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>▶ 仿真控制</span>
+                <span data-i18n="secSim">▶ 仿真控制</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b">
                 <div class="btn-row">
-                    <button class="btn primary" onclick="startSim('free')" data-tip="开始自由仿真 (Space)">▶ 自由仿真</button>
-                    <button class="btn danger" onclick="stopSim()" data-tip="停止仿真 (Space)">■ 停止</button>
-                    <button class="btn" onclick="resetSim()" data-tip="重置仿真 (R)">↺ 重置</button>
-                    <button class="btn success" onclick="stepResponse()" data-tip="阶跃响应测试">阶跃 5°</button>
+                    <button class="btn primary" onclick="startSim('free')" data-tip="开始自由仿真 (Space)" data-i18n="btnFree">▶ 自由仿真</button>
+                    <button class="btn danger" onclick="stopSim()" data-tip="停止仿真 (Space)" data-i18n="btnStop">■ 停止</button>
+                    <button class="btn" onclick="resetSim()" data-tip="重置仿真 (R)" data-i18n="btnReset">↺ 重置</button>
+                    <button class="btn success" onclick="stepResponse()" data-tip="阶跃响应测试" data-i18n="btnStep">阶跃 5°</button>
                 </div>
             </div>
         </div>
@@ -271,12 +272,13 @@
         <!-- Auto Tune -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>⚡ 自动调参</span>
+                <span data-i18n="secAuto">⚡ 自动调参</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b">
                 <div class="btn-row">
-                    <button class="btn warning" onclick="autoTune()" id="btnAuto" data-tip="自动搜索最优参数">⚡ 自动调参</button>
+                    <button class="btn warning" onclick="autoTune()" id="btnAuto" data-tip="自动搜索最优参数" data-i18n="btnAutoTune">⚡ 自动调参</button>
+                    <button class="btn danger" onclick="cancelAutoTune()" id="btnCancelAuto" style="display:none" data-tip="取消正在进行的调参" data-i18n="btnCancelTune">✕ 取消调参</button>
                 </div>
                 <div class="progress"><div class="progress-bar" id="progress"></div></div>
                 <div style="font-size:11px;color:var(--dim);margin-top:6px" id="tuneStatus"></div>
@@ -287,16 +289,16 @@
         <!-- Serial -->
         <div class="sec">
             <div class="sec-h" onclick="toggleSec(this)">
-                <span>📡 串口连接</span>
+                <span data-i18n="secSerial">📡 串口连接</span>
                 <span class="arrow">▼</span>
             </div>
             <div class="sec-b">
                 <div class="serial-row">
                     <select id="serialPort"><option>COM3</option></select>
-                    <button class="btn primary" onclick="startSerial()">连接</button>
-                    <button class="btn danger" onclick="stopSerial()">断开</button>
+                    <button class="btn primary" onclick="startSerial()" data-i18n="btnConnect">连接</button>
+                    <button class="btn danger" onclick="stopSerial()" data-i18n="btnDisconnect">断开</button>
                 </div>
-                <div style="font-size:11px;color:var(--dim)" id="serialStatus">未连接</div>
+                <div style="font-size:11px;color:var(--dim)" id="serialStatus" data-i18n="serialDisconnected">未连接</div>
             </div>
         </div>
     </div>
@@ -305,25 +307,153 @@
     <div class="chart-area">
         <div class="chart-toolbar">
             <div class="chart-hint">
-                <span>🖱️ 滚轮缩放</span>
-                <span>✋ 拖拽平移</span>
-                <span>👆 点击图例隐藏</span>
-                <span>⌨️ Space 开始/停止 · R 重置</span>
+                <span data-i18n="chartZoom">🖱️ 滚轮缩放</span>
+                <span data-i18n="chartPan">✋ 拖拽平移</span>
+                <span data-i18n="chartLegend">👆 点击图例隐藏</span>
+                <span data-i18n="chartKey">⌨️ Space 开始/停止 · R 重置</span>
             </div>
-            <button class="btn" onclick="chart.resetZoom()" data-tip="重置缩放 (Home)">🔍 重置视图</button>
+            <button class="btn" onclick="chart.resetZoom()" data-tip="重置缩放 (Home)" data-i18n="btnResetView">🔍 重置视图</button>
         </div>
         <div class="chart-container"><canvas id="chart"></canvas></div>
     </div>
 </div>
 
 <div class="statusbar">
-    <div class="item" id="sbSim">● 就绪</div><div class="sep"></div>
-    <div class="item" id="sbSerial">📡 未连接</div><div class="sep"></div>
+    <div class="item" id="sbSim" data-i18n="sbReady">● 就绪</div><div class="sep"></div>
+    <div class="item" id="sbSerial" data-i18n="sbDisconnected">📡 未连接</div><div class="sep"></div>
     <div class="item" id="sbRate">0 pts/s</div><div class="sep"></div>
     <div class="item" id="sbParams">-</div>
 </div>
 
 <script>
+// ======================== i18n ========================
+const LANGS = {
+  zh: {
+    _label: '中文',
+    // Titlebar
+    simReady: '就绪', simRunning: '运行中', simStopped: '已停止', simConnected: '已连接',
+    // Sections
+    secAxis: '📐 轴选择', secPID: '⚙ PID 参数', secAdv: '🔧 高级参数',
+    secPreset: '💾 参数预设', secSim: '▶ 仿真控制', secAuto: '⚡ 自动调参', secSerial: '📡 串口连接',
+    // Buttons
+    btnFree: '▶ 自由仿真', btnStop: '■ 停止', btnReset: '↺ 重置', btnStep: '阶跃 5°',
+    btnAutoTune: '⚡ 自动调参', btnCancelTune: '✕ 取消调参', btnTuning: '⏳ 调参中...',
+    btnConnect: '连接', btnDisconnect: '断开', btnSave: '保存', btnResetView: '🔍 重置视图',
+    // Status bar
+    sbReady: '● 就绪', sbStopped: '● 停止', sbStep: '● 阶跃', sbDisconnected: '📡 未连接',
+    // Serial
+    serialDisconnected: '未连接',
+    // Tooltips
+    tipFree: '开始自由仿真 (Space)', tipStop: '停止仿真 (Space)', tipReset: '重置仿真 (R)',
+    tipStep: '阶跃响应测试', tipAuto: '自动搜索最优参数', tipCancel: '取消正在进行的调参',
+    tipResetZoom: '重置缩放 (Home)',
+    // Param tips
+    tipKp: '比例增益：越大响应越快，但过大引起振荡',
+    tipKi: '积分增益：消除稳态误差，过大引起超调',
+    tipKd: '微分增益：抑制振荡，过大放大噪声',
+    tipDB: '死区：误差小于此值时输出为零，消除机械间隙振荡',
+    tipDTau: '微分滤波时间常数，越大滤波越强但响应更慢',
+    tipSPW: '设定值权重，1.0=标准PID，<1.0减少比例冲击',
+    tipRamp: 'IR丢失后每周期回零步长，越大回正越快',
+    // Chart
+    chartTime: '时间 (s)', chartAngle: '角度 (°)', chartOutput: 'PID 输出',
+    chartZoom: '🖱️ 滚轮缩放', chartPan: '✋ 拖拽平移', chartLegend: '👆 点击图例隐藏',
+    chartKey: '⌨️ Space 开始/停止 · R 重置',
+    // Auto tune result
+    atBest: '🏆 最优参数', atMetrics: '📊 性能指标',
+    atSS: '稳态误差:', atOsc: '振荡:', atOver: '超调:', atScore: '评分:',
+    // Preset
+    presetPlaceholder: '输入预设名称...',
+    // Axis labels (for chart datasets)
+    labelSetpoint: ' 设定值', labelActual: ' 实际', labelOutput: ' 输出',
+    // Language toggle
+    langBtn: 'EN', langName: 'English',
+  },
+  en: {
+    _label: 'English',
+    // Titlebar
+    simReady: 'Ready', simRunning: 'Running', simStopped: 'Stopped', simConnected: 'Connected',
+    // Sections
+    secAxis: '📐 Axis', secPID: '⚙ PID Params', secAdv: '🔧 Advanced',
+    secPreset: '💾 Presets', secSim: '▶ Simulation', secAuto: '⚡ Auto Tune', secSerial: '📡 Serial',
+    // Buttons
+    btnFree: '▶ Free Sim', btnStop: '■ Stop', btnReset: '↺ Reset', btnStep: 'Step 5°',
+    btnAutoTune: '⚡ Auto Tune', btnCancelTune: '✕ Cancel', btnTuning: '⏳ Tuning...',
+    btnConnect: 'Connect', btnDisconnect: 'Disconnect', btnSave: 'Save', btnResetView: '🔍 Reset View',
+    // Status bar
+    sbReady: '● Ready', sbStopped: '● Stopped', sbStep: '● Step', sbDisconnected: '📡 Disconnected',
+    // Serial
+    serialDisconnected: 'Disconnected',
+    // Tooltips
+    tipFree: 'Start free simulation (Space)', tipStop: 'Stop simulation (Space)', tipReset: 'Reset simulation (R)',
+    tipStep: 'Step response test', tipAuto: 'Auto search optimal params', tipCancel: 'Cancel running tune',
+    tipResetZoom: 'Reset zoom (Home)',
+    // Param tips
+    tipKp: 'Proportional gain: faster response, too high causes oscillation',
+    tipKi: 'Integral gain: eliminates steady-state error, too high causes overshoot',
+    tipKd: 'Derivative gain: dampens oscillation, too high amplifies noise',
+    tipDB: 'Deadband: output zero when error < value, eliminates mechanical backlash',
+    tipDTau: 'Derivative filter time constant, higher = stronger filter but slower response',
+    tipSPW: 'Setpoint weight, 1.0=standard PID, <1.0 reduces proportional kick',
+    tipRamp: 'Ramp-to-zero step after IR loss, higher = faster return',
+    // Chart
+    chartTime: 'Time (s)', chartAngle: 'Angle (°)', chartOutput: 'PID Output',
+    chartZoom: '🖱️ Scroll to zoom', chartPan: '✋ Drag to pan', chartLegend: '👆 Click legend to toggle',
+    chartKey: '⌨️ Space start/stop · R reset',
+    // Auto tune result
+    atBest: '🏆 Best Params', atMetrics: '📊 Metrics',
+    atSS: 'SS Error:', atOsc: 'Oscillation:', atOver: 'Overshoot:', atScore: 'Score:',
+    // Preset
+    presetPlaceholder: 'Enter preset name...',
+    // Axis labels
+    labelSetpoint: ' Setpoint', labelActual: ' Actual', labelOutput: ' Output',
+    // Language toggle
+    langBtn: '中文', langName: '中文',
+  }
+};
+
+let currentLang = localStorage.getItem('pid_tuner_lang') || 'zh';
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('pid_tuner_lang', lang);
+  const L = LANGS[lang];
+  // Update all [data-i18n] elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (L[key] !== undefined) el.textContent = L[key];
+  });
+  // Update all [data-i18n-placeholder] elements
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (L[key] !== undefined) el.placeholder = L[key];
+  });
+  // Update lang toggle button
+  const langBtn = document.getElementById('langToggle');
+  if (langBtn) { langBtn.textContent = L.langBtn; langBtn.title = L.langName; }
+  // Update html lang attribute
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  // Rebuild axis labels if chart exists
+  if (chart && cfg.axes.length) rebuildChartLabels();
+}
+
+function t(key) { return LANGS[currentLang][key] || key; }
+
+function rebuildChartLabels() {
+  const L = LANGS[currentLang];
+  cfg.axes.forEach((axis, i) => {
+    const ds = chart.data.datasets;
+    if (ds[i*3])   ds[i*3].label   = axis.name + L.labelSetpoint;
+    if (ds[i*3+1]) ds[i*3+1].label = axis.name + L.labelActual;
+    if (ds[i*3+2]) ds[i*3+2].label = axis.name + L.labelOutput;
+  });
+  // Chart axis titles
+  chart.options.scales.x.title.text = L.chartTime;
+  chart.options.scales.y.title.text = L.chartAngle;
+  chart.options.scales.y1.title.text = L.chartOutput;
+  chart.update('none');
+}
+
 const socket = io({transports:['websocket','polling'],forceNew:true});
 let cfg = {axes:[], presets:{}, serial:{}, chart:{}};
 let currentAxis = 0;
@@ -346,11 +476,12 @@ function toggleSec(el){
 
 // Chart initialization
 function initChart(){
+    const L = LANGS[currentLang];
     const datasets = [];
     cfg.axes.forEach((axis,i)=>{
-        datasets.push({label:axis.name+' 设定值',data:[],borderColor:SP_COLORS[i%6],borderWidth:1.5,pointRadius:0,tension:.1,borderDash:[5,3]});
-        datasets.push({label:axis.name+' 实际',data:[],borderColor:COLORS[i%6],borderWidth:2,pointRadius:0,tension:.1,fill:false});
-        datasets.push({label:axis.name+' 输出',data:[],borderColor:COLORS[(i+2)%6],borderWidth:1,pointRadius:0,tension:.1,yAxisID:'y1',fill:false});
+        datasets.push({label:axis.name+L.labelSetpoint,data:[],borderColor:SP_COLORS[i%6],borderWidth:1.5,pointRadius:0,tension:.1,borderDash:[5,3]});
+        datasets.push({label:axis.name+L.labelActual,data:[],borderColor:COLORS[i%6],borderWidth:2,pointRadius:0,tension:.1,fill:false});
+        datasets.push({label:axis.name+L.labelOutput,data:[],borderColor:COLORS[(i+2)%6],borderWidth:1,pointRadius:0,tension:.1,yAxisID:'y1',fill:false});
     });
     const ctx = document.getElementById('chart').getContext('2d');
     chart = new Chart(ctx,{
@@ -360,9 +491,9 @@ function initChart(){
             animation:false,responsive:true,maintainAspectRatio:false,
             interaction:{mode:'index',intersect:false},
             scales:{
-                x:{display:true,title:{display:true,text:'时间 (s)',color:'#666',font:{size:11,weight:'500'}},ticks:{color:'#888',maxTicksLimit:12,font:{size:10}},grid:{color:'#e8e8e8',lineWidth:1}},
-                y:{position:'left',title:{display:true,text:'角度 (°)',color:'#0078d4',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},suggestedMin:-15,suggestedMax:15,grid:{color:'#e8e8e8',lineWidth:1}},
-                y1:{position:'right',title:{display:true,text:'PID 输出',color:'#2e7d32',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},grid:{drawOnChartArea:false}}
+                x:{display:true,title:{display:true,text:L.chartTime,color:'#666',font:{size:11,weight:'500'}},ticks:{color:'#888',maxTicksLimit:12,font:{size:10}},grid:{color:'#e8e8e8',lineWidth:1}},
+                y:{position:'left',title:{display:true,text:L.chartAngle,color:'#0078d4',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},suggestedMin:-15,suggestedMax:15,grid:{color:'#e8e8e8',lineWidth:1}},
+                y1:{position:'right',title:{display:true,text:L.chartOutput,color:'#2e7d32',font:{size:11,weight:'500'}},ticks:{color:'#888',font:{size:10}},grid:{drawOnChartArea:false}}
             },
             plugins:{
                 legend:{display:true,position:'top',labels:{color:'#666',font:{size:11},usePointStyle:true,pointStyle:'line',padding:16,boxWidth:20}},
@@ -392,13 +523,13 @@ function buildParamsUI(){
 
     // Tips for parameters
     const tips = {
-        kp:'比例增益：越大响应越快，但过大引起振荡',
-        ki:'积分增益：消除稳态误差，过大引起超调',
-        kd:'微分增益：抑制振荡，过大放大噪声',
-        deadband:'死区：误差小于此值时输出为零，消除机械间隙振荡',
-        d_tau:'微分滤波时间常数，越大滤波越强但响应更慢',
-        sp_weight:'设定值权重，1.0=标准PID，<1.0减少比例冲击',
-        ramp_step:'IR丢失后每周期回零步长，越大回正越快'
+        kp: t('tipKp'),
+        ki: t('tipKi'),
+        kd: t('tipKd'),
+        deadband: t('tipDB'),
+        d_tau: t('tipDTau'),
+        sp_weight: t('tipSPW'),
+        ramp_step: t('tipRamp')
     };
 
     // Core params
@@ -487,6 +618,8 @@ socket.on('config',data=>{
     initChart();
     buildParamsUI();
     buildPresets();
+    // Apply saved language
+    setLang(currentLang);
 });
 socket.on('presets_updated',data=>{cfg.presets=data;buildPresets()});
 socket.on('sim_data',data=>{
@@ -536,7 +669,7 @@ function startSim(mode){
     socket.emit('start_sim',{mode});
     simRunning=true;
     document.getElementById('simDot').className='dot run';
-    document.getElementById('simLabel').textContent='运行中';
+    document.getElementById('simLabel').textContent=t('simRunning');
     document.getElementById('sbSim').textContent='● '+mode;
     document.getElementById('sbSim').className='item active';
 }
@@ -544,8 +677,8 @@ function stopSim(){
     socket.emit('stop_sim');
     simRunning=false;
     document.getElementById('simDot').className='dot';
-    document.getElementById('simLabel').textContent='已停止';
-    document.getElementById('sbSim').textContent='● 停止';
+    document.getElementById('simLabel').textContent=t('simStopped');
+    document.getElementById('sbSim').textContent=t('sbStopped');
     document.getElementById('sbSim').className='item';
     document.getElementById('sbSim').style.color='var(--danger)';
 }
@@ -554,8 +687,8 @@ function resetSim(){
     simRunning=false;
     if(chart){chart.data.labels=[];chart.data.datasets.forEach(d=>d.data=[]);chart.update()}
     document.getElementById('simDot').className='dot';
-    document.getElementById('simLabel').textContent='就绪';
-    document.getElementById('sbSim').textContent='● 就绪';
+    document.getElementById('simLabel').textContent=t('simReady');
+    document.getElementById('sbSim').textContent=t('sbReady');
     document.getElementById('sbSim').className='item';
     document.getElementById('sbSim').style.color='';
 }
@@ -563,39 +696,48 @@ function stepResponse(){
     socket.emit('step_response',{target:5});
     simRunning=true;
     document.getElementById('simDot').className='dot run';
-    document.getElementById('simLabel').textContent='阶跃 0→5°';
-    document.getElementById('sbSim').textContent='● 阶跃';
+    document.getElementById('simLabel').textContent='Step 0→5°';
+    document.getElementById('sbSim').textContent=t('sbStep');
     document.getElementById('sbSim').className='item active';
 }
 
 // Auto tune
 function autoTune(){
     document.getElementById('btnAuto').disabled=true;
-    document.getElementById('btnAuto').textContent='⏳ 调参中...';
+    document.getElementById('btnAuto').textContent=t('btnTuning');
+    document.getElementById('btnCancelAuto').style.display='inline-flex';
     document.getElementById('resultBox').className='result';
     socket.emit('auto_tune',{target:5});
+}
+function cancelAutoTune(){
+    socket.emit('cancel_auto_tune');
 }
 socket.on('auto_tune_progress',d=>{
     document.getElementById('tuneStatus').textContent=d.msg;
     if(d.total>0) document.getElementById('progress').style.width=Math.round(d.progress/d.total*100)+'%';
+    if(d.status==='cancelled'||d.status==='done'||d.status==='error'||d.status==='idle'||d.status==='busy'){
+        document.getElementById('btnAuto').disabled=false;
+        document.getElementById('btnAuto').textContent=t('btnAutoTune');
+        document.getElementById('btnCancelAuto').style.display='none';
+    }
 });
 socket.on('auto_tune_result',d=>{
     document.getElementById('btnAuto').disabled=false;
-    document.getElementById('btnAuto').textContent='⚡ 自动调参';
+    document.getElementById('btnAuto').textContent=t('btnAutoTune');
     document.getElementById('progress').style.width='100%';
     document.getElementById('tuneStatus').textContent=d.msg;
     const m=d.metrics;const b=document.getElementById('resultBox');
-    b.innerHTML=`<b>🏆 最优参数</b><br>`+
+    b.innerHTML=`<b>${t('atBest')}</b><br>`+
         `Kp=<span class="metric">${d.params.kp.toFixed(2)}</span> `+
         `Ki=<span class="metric">${d.params.ki.toFixed(2)}</span> `+
         `Kd=<span class="metric">${d.params.kd.toFixed(3)}</span><br>`+
         `Deadband=<span class="metric">${d.params.deadband.toFixed(1)}</span> `+
         `Dτ=<span class="metric">${d.params.d_tau.toFixed(3)}</span><br><br>`+
-        `<b>📊 性能指标</b><br>`+
-        `稳态误差: <span class="metric">${m.ss_error}°</span> `+
-        `振荡: <span class="metric">${m.ss_osc}°</span><br>`+
-        `超调: <span class="metric">${m.overshoot}%</span> `+
-        `评分: <span class="metric">${m.score}</span>`;
+        `<b>${t('atMetrics')}</b><br>`+
+        `${t('atSS')} <span class="metric">${m.ss_error}°</span> `+
+        `${t('atOsc')} <span class="metric">${m.ss_osc}°</span><br>`+
+        `${t('atOver')} <span class="metric">${m.overshoot}%</span> `+
+        `${t('atScore')} <span class="metric">${m.score}</span>`;
     b.className='result show';
 });
 function savePreset(){
@@ -627,7 +769,7 @@ socket.on('serial_status',d=>{
     sb.style.color=el.style.color;
     if(d.status==='connected'){
         document.getElementById('simDot').className='dot ok';
-        document.getElementById('simLabel').textContent='已连接';
+        document.getElementById('simLabel').textContent=t('simConnected');
     }
 });
 

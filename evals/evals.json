@@ -3,20 +3,32 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "我的 STM32 项目 PID 控制器有稳态振荡，帮我调参消除振荡",
-      "expected_output": "检测项目 PID 配置，创建仿真环境，启动 Web 界面，用户可通过滑块调参或自动调参",
+      "prompt": "我的 STM32 平衡车项目需要调 PID 参数，当前 Kp=100, Ki=0, Kd=10，但车一直在振荡，帮我仿真调参",
+      "expected_output": "创建仿真环境，检测项目配置，启动仿真器，提供调参建议",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "我想看下 PID 的阶跃响应曲线，Kp=1.5 Ki=1.5 Kd=0.06",
-      "expected_output": "启动仿真器，显示阶跃响应曲线，支持缩放和平移",
+      "prompt": "帮我创建一个 PID 仿真工具，能连接串口实时显示波形，支持多轴显示",
+      "expected_output": "创建完整的仿真环境，包含前后端，支持串口连接和多轴显示",
       "files": []
     },
     {
       "id": 3,
-      "prompt": "帮我在 STM32 上添加 UART 输出 PID 数据的功能，用 USART1 PA9/PA10",
-      "expected_output": "生成 usart.c/h，添加 UART 初始化和数据输出代码",
+      "prompt": "PID 调参，振荡了，怎么消除稳态误差",
+      "expected_output": "分析振荡原因，提供调参建议，可能需要调整 Ki 或添加死区",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "balance car PID tuning, oscillation problem, need simulation",
+      "expected_output": "创建仿真环境，分析振荡原因，提供英文界面的调参工具",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "我的项目用的 VOFA+ 协议，波特率 115200，怎么配置仿真器",
+      "expected_output": "检测 VOFA+ 协议配置，设置正确的波特率和数据格式",
       "files": []
     }
   ]
